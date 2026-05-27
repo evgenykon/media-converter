@@ -1,19 +1,22 @@
 # Media Converter
 
-A Flutter application for media conversion.
+Desktop tool for video/audio conversion using FFmpeg, with YouTube download support.
 
-## Getting Started
+## Dependencies
 
-### Prerequisites
+The app requires these tools installed on your system:
 
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) `^3.12.0`
-- Platform-specific toolchains (Xcode for iOS/macOS, Android Studio for Android, etc.)
-
-### Setup
+| Dependency | Install | Required for |
+|---|---|---|
+| [FFmpeg](https://ffmpeg.org/) | `brew install ffmpeg` | Video/audio conversion |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | `brew install yt-dlp` | YouTube downloads |
 
 ```bash
-flutter pub get
+# Install both
+brew install ffmpeg yt-dlp
 ```
+
+On first launch, the app will check for FFmpeg and offer to install it via Homebrew.
 
 ## Makefile Commands
 
@@ -22,25 +25,41 @@ flutter pub get
 | `make setup` | Install dependencies |
 | `make analyze` | Run the Dart analyzer |
 | `make test` | Run all tests |
-| `make clean` | Clean build artifacts and cache |
-| `make run` | Run on connected device |
-| `make build platform=<target>` | Build for a platform (`apk`, `ios`, `web`, `macos`, `linux`, `windows`) |
+| `make run` | Build and launch on macOS |
+| `make release VERSION=x.y.z` | Build release version and create ZIP archive |
+| `make clean` | Clean build artifacts |
+| `make purge` | Clean everything (derived data, caches) |
 | `make format` | Format Dart source code |
-| `make outdated` | Check for outdated dependencies |
-| `make upgrade` | Upgrade dependencies |
 | `make doctor` | Check Flutter installation status |
 
 ## Building
 
 ```bash
-# macOS
-make build platform=macos
+# Debug build and run
+make run
 
-# Windows
+# Release build
+make release VERSION=1.0.0
+# → dist/media_converter-1.0.0-macos.zip
+
+# Windows (from Windows)
 make build platform=windows
 ```
 
-## Resources
+## Download
 
-- [Flutter Documentation](https://docs.flutter.dev/)
-- [Dart Documentation](https://dart.dev/guides)
+Pre-built binaries are available on the [Releases](https://github.com/evgenykon/media-converter/releases) page.
+
+1. Download `media_converter-*-macos.zip`
+2. Extract and move `media_converter.app` to Applications
+3. Run `brew install ffmpeg yt-dlp`
+4. Open the app
+
+## Features
+
+- Video conversion between formats (MP4, WebM, AVI, MOV, GIF, etc.)
+- Audio extraction (MP3, AAC, FLAC, OGG)
+- Hardware acceleration (VideoToolbox on macOS)
+- YouTube video/audio download with format selection
+- Conversion history
+- System notifications
