@@ -8,12 +8,44 @@ The app requires these tools installed on your system:
 
 | Dependency | Install | Required for |
 |---|---|---|
-| [FFmpeg](https://ffmpeg.org/) | `brew install ffmpeg` | Video/audio conversion |
-| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | `brew install yt-dlp` | YouTube downloads |
+| [FFmpeg](https://ffmpeg.org/) | `brew install ffmpeg` / `winget install ffmpeg` | Video/audio conversion |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | `brew install yt-dlp` / `winget install yt-dlp` | YouTube downloads |
 
 ```bash
-# Install both
+# macOS
 brew install ffmpeg yt-dlp
+
+# Windows
+winget install ffmpeg yt-dlp
+```
+
+On first launch, the app will check for FFmpeg and offer to install it via Homebrew.
+
+## Building
+
+```bash
+# Debug build and run (macOS)
+make run
+
+# Release build (macOS)
+make release VERSION=1.0.0
+# → dist/media_converter-1.0.0-macos.zip
+```
+
+### Windows
+
+```bash
+flutter build windows --release
+# → build\windows\x64\runner\Release\
+```
+
+### GitHub Actions
+
+Push a tag to automatically build both platforms:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 On first launch, the app will check for FFmpeg and offer to install it via Homebrew.
