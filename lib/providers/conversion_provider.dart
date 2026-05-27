@@ -71,14 +71,20 @@ class ConversionProvider extends Notifier<ConversionState> {
   Future<String> startConversion({
     required MediaFile source,
     required Preset preset,
+    String speed = 'medium',
+    bool useHardware = false,
+    String? outputName,
   }) async {
     final id = _uuid.v4();
-    final dir = _getDefaultOutputDir();
+    final dir = _getDefaultOutputDir(source.path);
     final ext = preset.container;
-    final baseName = source.name.contains('.')
+    final defaultName = source.name.contains('.')
         ? source.name.substring(0, source.name.lastIndexOf('.'))
         : source.name;
-    final outputPath = '${dir.path}/$baseName.$ext';
+    final outName = (outputName != null && outputName.isNotEmpty)
+        ? outputName
+        : '$defaultName.$ext';
+    final outputPath = '${dir.path}/$outName';
 
     var job = ConversionJob(
       id: id,
@@ -95,6 +101,8 @@ class ConversionProvider extends Notifier<ConversionState> {
       source: source,
       preset: preset,
       outputPath: outputPath,
+      speed: speed,
+      useHardware: useHardware,
       onProgress: (progress, sizeBytes, speed) {
         final updated = job.copyWith(progress: progress.clamp(0.0, 1.0));
         _updateJob(updated);
@@ -162,6 +170,12 @@ class ConversionProvider extends Notifier<ConversionState> {
     }
   }
 
+  void removeJob(String id) {
+    final jobs = state.jobs.where((j) => j.id != id).toList();
+    state = state.copyWith(jobs: jobs);
+    ref.read(historyServiceProvider).save(jobs);
+  }
+
   void clearHistory() {
     state = state.copyWith(jobs: []);
     ref.read(historyServiceProvider).save([]);
@@ -172,18 +186,8 @@ class ConversionProvider extends Notifier<ConversionState> {
     state = state.copyWith(jobs: jobs);
   }
 
-  Directory _getDefaultOutputDir() {
-    final custom = ref.read(settingsProvider).defaultOutputDir;
-    if (custom != null) {
-      final dir = Directory(custom);
-      if (dir.existsSync()) return dir;
-    }
-    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '';
-    if (home.isNotEmpty) {
-      final downloads = Directory('$home/Downloads');
-      if (downloads.existsSync()) return downloads;
-    }
-    return Directory(home);
+  Directory _getDefaultOutputDir(String sourcePath) {
+    return Directory(sourcePath).parent;
   }
 }
 

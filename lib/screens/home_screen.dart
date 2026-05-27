@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -50,6 +51,10 @@ class HomeScreen extends ConsumerWidget {
                   onCancel: jobs[index].status == JobStatus.running
                       ? () => ref.read(conversionProvider.notifier).cancelJob(jobs[index].id)
                       : null,
+                  onDelete: () => ref.read(conversionProvider.notifier).removeJob(jobs[index].id),
+                  onOpenFolder: jobs[index].status == JobStatus.completed
+                      ? () => _openFolder(jobs[index].outputPath)
+                      : null,
                 ),
               ),
             ),
@@ -95,6 +100,9 @@ class HomeScreen extends ConsumerWidget {
         await ref.read(conversionProvider.notifier).startConversion(
           source: file,
           preset: modalResult.preset,
+          speed: modalResult.speed,
+          useHardware: modalResult.useHardware,
+          outputName: modalResult.outputName,
         );
       } catch (e) {
         if (context.mounted) {
@@ -126,6 +134,10 @@ class HomeScreen extends ConsumerWidget {
       context: context,
       builder: (context) => _SettingsDialog(settings: settings),
     );
+  }
+
+  void _openFolder(String path) {
+    Process.run('open', ['-R', path]);
   }
 
   void _confirmClearHistory(BuildContext context, WidgetRef ref) {

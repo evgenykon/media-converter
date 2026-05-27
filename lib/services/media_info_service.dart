@@ -1,76 +1,96 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
-import 'package:ffmpeg_kit_extended_flutter/ffmpeg_kit_extended_flutter.dart';
 
 import '../models/media_file.dart';
+import 'ffmpeg_checker.dart';
 
 class MediaInfoService {
   Future<MediaFile> getMediaInfo(String path) async {
     debugPrint('MediaInfoService.getMediaInfo: path=$path');
-    final session = await FFprobeKit.getMediaInformationAsync(path);
-    final returnCode = session.getReturnCode();
-    debugPrint('FFprobe session return code: $returnCode');
 
-    final info = session.getMediaInformation();
-    debugPrint('MediaInformation: ${info?.toString()}');
+    final basic = await MediaFile.fromPath(path);
 
-    MediaFile basic;
     try {
-      basic = await MediaFile.fromPath(path);
-      debugPrint('MediaFile.fromPath: name=${basic.name} size=${basic.sizeBytes}');
-    } catch (e, s) {
-      debugPrint('MediaFile.fromPath error: $e\n$s');
-      rethrow;
-    }
+      final ffprobe = FfmpegChecker.ffprobePath ?? 'ffprobe';
+      final result = await Process.run(ffprobe, [
+        '-v', 'quiet',
+        '-print_format', 'json',
+        '-show_format',
+        '-show_streams',
+        path,
+      ],
+        environment: {'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'},
+      );
 
-    if (info == null) return basic;
+      if (result.exitCode != 0) {
+        debugPrint('ffprobe failed: ${result.stderr}');
+        return basic;
+      }
 
-    final format = info.format ?? basic.format;
+      final json = jsonDecode(result.stdout as String) as Map<String, dynamic>;
+      final format = json['format'] as Map<String, dynamic>?;
+      final streams = json['streams'] as List<dynamic>?;
 
-    double? durationSeconds;
-    if (info.duration != null) {
-      durationSeconds = double.tryParse(info.duration!);
-    }
+      double? durationSeconds;
+      int? overallBitrate;
+      String? fmtName;
 
-    int? overallBitrate;
-    if (info.bitrate != null) {
-      overallBitrate = int.tryParse(info.bitrate!);
-    }
-
-    String? videoCodec;
-    String? audioCodec;
-    int? width;
-    int? height;
-    int? videoBitrate;
-    int? audioBitrate;
-
-    for (final stream in info.streams) {
-      if (stream.type == 'video') {
-        videoCodec = stream.codec;
-        width = stream.width;
-        height = stream.height;
-        if (stream.bitrate != null) {
-          videoBitrate = int.tryParse(stream.bitrate!);
+      if (format != null) {
+        fmtName = format['format_name'] as String?;
+        if (format['duration'] != null) {
+          durationSeconds = double.tryParse(format['duration'].toString());
         }
-      } else if (stream.type == 'audio') {
-        audioCodec = stream.codec;
-        if (stream.bitrate != null) {
-          audioBitrate = int.tryParse(stream.bitrate!);
+        if (format['bit_rate'] != null) {
+          overallBitrate = int.tryParse(format['bit_rate'].toString());
         }
       }
-    }
 
-    return MediaFile(
-      path: basic.path,
-      name: basic.name,
-      sizeBytes: basic.sizeBytes,
-      format: format,
-      videoCodec: videoCodec,
-      audioCodec: audioCodec,
-      width: width,
-      height: height,
-      durationSeconds: durationSeconds,
-      videoBitrate: videoBitrate ?? overallBitrate,
-      audioBitrate: audioBitrate,
-    );
+      String? videoCodec;
+      String? audioCodec;
+      int? width;
+      int? height;
+      int? videoBitrate;
+      int? audioBitrate;
+
+      if (streams != null) {
+        for (final s in streams) {
+          final stream = s as Map<String, dynamic>;
+          final type = stream['codec_type'] as String?;
+
+          if (type == 'video') {
+            videoCodec = stream['codec_name'] as String?;
+            width = stream['width'] as int?;
+            height = stream['height'] as int?;
+            if (stream['bit_rate'] != null) {
+              videoBitrate = int.tryParse(stream['bit_rate'].toString());
+            }
+          } else if (type == 'audio') {
+            audioCodec = stream['codec_name'] as String?;
+            if (stream['bit_rate'] != null) {
+              audioBitrate = int.tryParse(stream['bit_rate'].toString());
+            }
+          }
+        }
+      }
+
+      return MediaFile(
+        path: basic.path,
+        name: basic.name,
+        sizeBytes: basic.sizeBytes,
+        format: fmtName ?? basic.format,
+        videoCodec: videoCodec,
+        audioCodec: audioCodec,
+        width: width,
+        height: height,
+        durationSeconds: durationSeconds,
+        videoBitrate: videoBitrate ?? overallBitrate,
+        audioBitrate: audioBitrate,
+      );
+    } catch (e, s) {
+      debugPrint('ffprobe error: $e\n$s');
+      return basic;
+    }
   }
 }

@@ -24,8 +24,9 @@ purge: ## Clean garbage: derived data, caches, build artifacts
 	rm -rf ~/Library/Developer/Xcode/DerivedData/Runner-*
 	flutter pub cache clean
 
-run: ## Run on macOS
-	flutter run -d macos
+run: ## Build and launch on macOS
+	flutter build macos --debug
+	open build/macos/Build/Products/Debug/media_converter.app
 
 build: ## Build for a specific platform (usage: make build platform=apk|ios|web|macos|linux|windows)
 	flutter build $(platform)

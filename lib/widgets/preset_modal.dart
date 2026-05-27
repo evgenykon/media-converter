@@ -1,11 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../models/media_file.dart';
 import '../models/preset.dart';
+import '../services/ffmpeg_service.dart';
 
 class PresetModalResult {
   final Preset preset;
-  PresetModalResult(this.preset);
+  final String speed;
+  final bool useHardware;
+  final String outputName;
+  PresetModalResult(this.preset, {this.speed = 'medium', this.useHardware = false, required this.outputName});
 }
 
 Future<PresetModalResult?> showPresetModal({
@@ -36,6 +42,27 @@ class _PresetModalContentState extends State<_PresetModalContent>
     with SingleTickerProviderStateMixin {
   Preset? _selected;
   late TabController _tabController;
+  String _speed = FfmpegService.defaultSpeed;
+  bool _useHardware = FfmpegService.useHardwareAccelerationDefault;
+  final _outputNameController = TextEditingController();
+
+  String _outputNameFor(Preset p) {
+    final name = widget.file.name;
+    final base = name.contains('.')
+        ? name.substring(0, name.lastIndexOf('.'))
+        : name;
+    final ext = p.container;
+    final dir = _outputDir;
+    var candidate = '$base.$ext';
+    var counter = 1;
+    while (File('${dir.path}/$candidate').existsSync()) {
+      candidate = '$base ($counter).$ext';
+      counter++;
+    }
+    return candidate;
+  }
+
+  Directory get _outputDir => Directory(widget.file.path).parent;
 
   static const _tabs = ['Инфо', 'Видео', 'Аудио', 'Устройства'];
 
@@ -69,15 +96,24 @@ class _PresetModalContentState extends State<_PresetModalContent>
         });
       }
     });
-    final firstPresets = _categoryPresets;
-    if (firstPresets.isNotEmpty) {
-      _selected = firstPresets.first;
+    final initialPresets = widget.presets.where((p) => p.category == PresetCategory.video).toList();
+    if (initialPresets.isNotEmpty) {
+      _selected = initialPresets.first;
+      _outputNameController.text = _outputNameFor(_selected!);
     }
+  }
+
+  void _onPresetChanged(Preset preset) {
+    setState(() {
+      _selected = preset;
+      _outputNameController.text = _outputNameFor(preset);
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _outputNameController.dispose();
     super.dispose();
   }
 
@@ -203,12 +239,23 @@ class _PresetModalContentState extends State<_PresetModalContent>
         if (_selected != null) ...[
           const SizedBox(height: 8),
           _summaryBar(theme),
+          if (_selected!.category != PresetCategory.audio) ...[
+            const SizedBox(height: 8),
+            _speedSelector(theme),
+          ],
+          const SizedBox(height: 8),
+          _outputNameField(theme),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: FilledButton.icon(
               onPressed: () {
-                Navigator.of(context).pop(PresetModalResult(_selected!));
+                final name = _outputNameController.text.trim();
+                Navigator.of(context).pop(PresetModalResult(_selected!,
+                  speed: _speed,
+                  useHardware: _useHardware,
+                  outputName: name.isNotEmpty ? name : _outputNameFor(_selected!),
+                ));
               },
               icon: const Icon(Icons.play_arrow, size: 20),
               label: const Text('Старт'),
@@ -242,7 +289,7 @@ class _PresetModalContentState extends State<_PresetModalContent>
       margin: const EdgeInsets.only(bottom: 4),
       color: isSelected ? theme.colorScheme.primaryContainer : null,
       child: InkWell(
-        onTap: () => setState(() => _selected = preset),
+                        onTap: () => _onPresetChanged(preset),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -267,6 +314,81 @@ class _PresetModalContentState extends State<_PresetModalContent>
     );
   }
 
+  Widget _speedSelector(ThemeData theme) {
+    final isH264 = _selected!.videoCodec == 'libx264' || _selected!.videoCodec == 'libx265';
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Text('Скорость', style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
+                const Spacer(),
+                if (isH264)
+                  SizedBox(
+                    height: 28,
+                    child: Transform.scale(
+                      scale: 0.8,
+                      child: Switch(
+                        value: _useHardware,
+                        onChanged: (v) => setState(() => _useHardware = v),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ),
+                if (isH264)
+                  GestureDetector(
+                    onTap: () => setState(() => _useHardware = !_useHardware),
+                    child: Text('Аппаратное', style: theme.textTheme.labelSmall?.copyWith(
+                      color: _useHardware ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                    )),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: FfmpegService.speedPresets.map((s) => Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(s, style: const TextStyle(fontSize: 11)),
+                    selected: _speed == s,
+                    onSelected: !_useHardware ? (v) => setState(() => _speed = s) : null,
+                    visualDensity: VisualDensity.compact,
+                    selectedColor: theme.colorScheme.primaryContainer,
+                    checkmarkColor: theme.colorScheme.onPrimaryContainer,
+                  ),
+                )).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _outputNameField(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: TextField(
+        controller: _outputNameController,
+        decoration: InputDecoration(
+          labelText: 'Имя выходного файла',
+          isDense: true,
+          border: const OutlineInputBorder(),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          suffixIcon: Icon(Icons.edit, size: 16, color: theme.colorScheme.outline),
+        ),
+        style: theme.textTheme.bodySmall,
+      ),
+    );
+  }
+
   Widget _summaryBar(ThemeData theme) {
     final source = widget.file;
     final preset = _selected!;
@@ -280,17 +402,39 @@ class _PresetModalContentState extends State<_PresetModalContent>
         ? '~${estimated < 1024 * 1024 ? "${(estimated / 1024).toStringAsFixed(0)} KB" : estimated < 1024 * 1024 * 1024 ? "${(estimated / (1024 * 1024)).toStringAsFixed(1)} MB" : "${(estimated / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB"}'
         : '—';
 
+    final outputName = _outputNameController.text.trim();
+    final displayName = outputName.isNotEmpty ? outputName : _outputNameFor(preset);
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _chip(theme, '${source.formatFormatted} → ${preset.containerFormatted}', Icons.swap_horiz),
-            const SizedBox(width: 8),
-            _chip(theme, source.sizeFormatted, Icons.sd_storage),
-            const SizedBox(width: 8),
-            _chip(theme, estimatedStr, Icons.sd_storage_outlined),
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.swap_horiz, size: 14, color: theme.colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Flexible(child: Text(displayName, style: theme.textTheme.labelSmall, overflow: TextOverflow.ellipsis)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _chip(theme, '${source.name} • ${source.sizeFormatted}', Icons.sd_storage),
+                const SizedBox(width: 8),
+                _chip(theme, estimatedStr, Icons.sd_storage_outlined),
+              ],
+            ),
           ],
         ),
       ),

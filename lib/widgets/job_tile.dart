@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/conversion_job.dart';
 import 'progress_section.dart';
@@ -6,8 +7,10 @@ import 'progress_section.dart';
 class JobTile extends StatelessWidget {
   final ConversionJob job;
   final VoidCallback? onCancel;
+  final VoidCallback? onDelete;
+  final VoidCallback? onOpenFolder;
 
-  const JobTile({super.key, required this.job, this.onCancel});
+  const JobTile({super.key, required this.job, this.onCancel, this.onDelete, this.onOpenFolder});
 
   @override
   Widget build(BuildContext context) {
@@ -60,17 +63,47 @@ class JobTile extends StatelessWidget {
                   const SizedBox(width: 8),
                   _infoChip(theme, Icons.schedule, job.durationFormatted),
                   const Spacer(),
-                  Text(_formatDate(job.completedAt!), style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.outline,
-                  )),
+                  if (onDelete != null)
+                    IconButton(
+                      icon: Icon(Icons.delete_outline, size: 18, color: theme.colorScheme.outline),
+                      onPressed: onDelete,
+                      tooltip: 'Удалить из истории',
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  if (onOpenFolder != null)
+                    IconButton(
+                      icon: Icon(Icons.folder_open, size: 18, color: theme.colorScheme.primary),
+                      onPressed: onOpenFolder,
+                      tooltip: 'Открыть папку с файлом',
+                      visualDensity: VisualDensity.compact,
+                    ),
                 ],
               ),
             ],
             if (job.status == JobStatus.failed && job.errorMessage != null) ...[
               const SizedBox(height: 8),
-              Text(job.errorMessage!, style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-              )),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(job.errorMessage!, style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    )),
+                  ),
+                  InkWell(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: job.errorMessage!));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Ошибка скопирована'), duration: Duration(seconds: 2)),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Icon(Icons.copy, size: 16, color: theme.colorScheme.error),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ],
         ),
@@ -94,10 +127,6 @@ class JobTile extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   IconData get _icon {
