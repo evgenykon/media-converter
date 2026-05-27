@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -53,9 +54,11 @@ class ConversionProvider extends Notifier<ConversionState> {
     state = state.copyWith(isLoadingMediaInfo: true);
     try {
       final info = await ref.read(mediaInfoServiceProvider).getMediaInfo(path);
+      debugPrint('Media info parsed: ${info.name} format=${info.format} videoCodec=${info.videoCodec} duration=${info.durationSeconds}');
       state = state.copyWith(selectedFile: info, isLoadingMediaInfo: false);
       return info;
-    } catch (e) {
+    } catch (e, s) {
+      debugPrint('pickAndAnalyzeFile error: $e\n$s');
       state = state.copyWith(isLoadingMediaInfo: false);
       return null;
     }

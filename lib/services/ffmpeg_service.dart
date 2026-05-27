@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:ffmpeg_kit_extended_flutter/ffmpeg_kit_extended_flutter.dart';
 
 import '../models/media_file.dart';
@@ -60,33 +61,45 @@ class FfmpegService {
       source: source,
     );
 
-    final session = await FFmpegKit.executeAsync(
-      command,
-      onStatistics: (Statistics statistics) {
-        final progress = statistics.transcodingProgress ?? 0.0;
-        onProgress(progress, statistics.size, statistics.speed);
-      },
-    );
+    debugPrint('FFmpeg command: $command');
 
-    _activeSession = session;
-    _activeJobId = jobId;
+    debugPrint('FFmpeg command: $command');
 
-    final returnCode = session.getReturnCode();
-    _activeSession = null;
-    _activeJobId = null;
+    try {
+      final session = await FFmpegKit.executeAsync(
+        command,
+        onStatistics: (Statistics statistics) {
+          final progress = statistics.transcodingProgress ?? 0.0;
+          onProgress(progress, statistics.size, statistics.speed);
+        },
+      );
 
-    if (ReturnCode.isSuccess(returnCode)) {
-      final outFile = File(outputPath);
-      if (await outFile.exists()) {
-        onComplete(true, null);
+      _activeSession = session;
+      _activeJobId = jobId;
+
+      final returnCode = session.getReturnCode();
+      _activeSession = null;
+      _activeJobId = null;
+
+      if (ReturnCode.isSuccess(returnCode)) {
+        final outFile = File(outputPath);
+        if (await outFile.exists()) {
+          onComplete(true, null);
+        } else {
+          onComplete(false, 'Выходной файл не найден');
+        }
+      } else if (ReturnCode.isCancel(returnCode)) {
+        onComplete(false, 'Отменено пользователем');
       } else {
-        onComplete(false, 'Выходной файл не найден');
+        final logs = session.getLogs();
+        debugPrint('FFmpeg error logs: $logs');
+        onComplete(false, logs ?? 'Неизвестная ошибка FFmpeg');
       }
-    } else if (ReturnCode.isCancel(returnCode)) {
-      onComplete(false, 'Отменено пользователем');
-    } else {
-      final logs = session.getLogs();
-      onComplete(false, logs ?? 'Неизвестная ошибка FFmpeg');
+    } catch (e, s) {
+      debugPrint('FFmpeg execute error: $e\n$s');
+      onComplete(false, 'Ошибка FFmpeg: $e');
+      _activeSession = null;
+      _activeJobId = null;
     }
   }
 

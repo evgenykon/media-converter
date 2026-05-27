@@ -75,7 +75,13 @@ class HomeScreen extends ConsumerWidget {
     if (path == null) return;
 
     final file = await ref.read(conversionProvider.notifier).pickAndAnalyzeFile(path);
-    if (file == null || !context.mounted) return;
+    if (!context.mounted) return;
+    if (file == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось прочитать информацию о файле')),
+      );
+      return;
+    }
 
     final presets = await _loadPresets();
     final modalResult = await showPresetModal(
@@ -85,10 +91,18 @@ class HomeScreen extends ConsumerWidget {
     );
 
     if (modalResult != null && context.mounted) {
-      ref.read(conversionProvider.notifier).startConversion(
-        source: file,
-        preset: modalResult.preset,
-      );
+      try {
+        await ref.read(conversionProvider.notifier).startConversion(
+          source: file,
+          preset: modalResult.preset,
+        );
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Ошибка: $e')),
+          );
+        }
+      }
     }
 
     if (context.mounted) {

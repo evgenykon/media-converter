@@ -24,8 +24,8 @@ purge: ## Clean garbage: derived data, caches, build artifacts
 	rm -rf ~/Library/Developer/Xcode/DerivedData/Runner-*
 	flutter pub cache clean
 
-run: ## Run on connected device
-	flutter run
+run: ## Run on macOS
+	flutter run -d macos
 
 build: ## Build for a specific platform (usage: make build platform=apk|ios|web|macos|linux|windows)
 	flutter build $(platform)

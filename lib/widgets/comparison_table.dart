@@ -36,13 +36,9 @@ class ComparisonTable extends StatelessWidget {
                     border: Border(bottom: BorderSide(color: theme.dividerColor)),
                   ),
                   children: [
-                    const SizedBox(height: 32),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Text('Параметр', style: mutedStyle),
-                      ),
+                      child: Text('Параметр', style: mutedStyle),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),

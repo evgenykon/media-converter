@@ -1,13 +1,26 @@
+import 'package:flutter/foundation.dart';
 import 'package:ffmpeg_kit_extended_flutter/ffmpeg_kit_extended_flutter.dart';
 
 import '../models/media_file.dart';
 
 class MediaInfoService {
   Future<MediaFile> getMediaInfo(String path) async {
+    debugPrint('MediaInfoService.getMediaInfo: path=$path');
     final session = await FFprobeKit.getMediaInformationAsync(path);
-    final info = session.getMediaInformation();
+    final returnCode = session.getReturnCode();
+    debugPrint('FFprobe session return code: $returnCode');
 
-    final basic = await MediaFile.fromPath(path);
+    final info = session.getMediaInformation();
+    debugPrint('MediaInformation: ${info?.toString()}');
+
+    MediaFile basic;
+    try {
+      basic = await MediaFile.fromPath(path);
+      debugPrint('MediaFile.fromPath: name=${basic.name} size=${basic.sizeBytes}');
+    } catch (e, s) {
+      debugPrint('MediaFile.fromPath error: $e\n$s');
+      rethrow;
+    }
 
     if (info == null) return basic;
 
