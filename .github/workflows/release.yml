@@ -37,7 +37,7 @@ jobs:
       - name: Package
         run: |
           mkdir dist -Force
-          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath dist\media_converter_${{ github.ref_name }}_windows.zip
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath dist\media_converter-${{ github.ref_name }}-windows.zip
       - uses: actions/upload-artifact@v4
         with:
           name: windows
