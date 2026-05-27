@@ -1,0 +1,74 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44'
+      - run: flutter pub get
+      - run: flutter build macos --release
+      - name: Package
+        run: |
+          mkdir -p dist
+          cd build/macos/Build/Products/Release
+          zip -r ../../../../../dist/media_converter-${{ github.ref_name }}-macos.zip media_converter.app -x "*.DS_Store"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/media_converter-*-macos.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44'
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - name: Package
+        run: |
+          mkdir dist -Force
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath dist\media_converter-${{ github.ref_name }}-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/media_converter-*-windows.zip
+
+  release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - run: |
+          mkdir -p dist
+          find artifacts -name "*.zip" -exec cp {} dist/ \;
+          ls -la dist/
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            ## Установка
+
+            ### macOS
+            1. Скачать `media_converter-*-macos.zip`
+            2. Распаковать и переместить `Media Converter.app` в `Applications`
+            3. Установить зависимости: `brew install ffmpeg yt-dlp`
+
+            ### Windows
+            1. Скачать `media_converter-*-windows.zip`
+            2. Распаковать и запустить `media_converter.exe`
+            3. Установить FFmpeg: `winget install ffmpeg` или `choco install ffmpeg`

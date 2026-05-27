@@ -1,64 +1,97 @@
-# FFMPEG UI
+# Media Converter
 
-Project goals: Desktop UI for ffmpeg tool
+Desktop tool for video/audio conversion using FFmpeg, with YouTube download support.
 
-## Current Version - 0.1
+## Dependencies
 
-1. Based on:
+The app requires these tools installed on your system:
 
-    - Vue 3
-    - Quasar https://quasar.dev/vue-components/
-    - Electron
-    - Material Icons https://fonts.google.com/icons?selected=Material+Icons&icon.query=info
+| Dependency | Install | Required for |
+|---|---|---|
+| [FFmpeg](https://ffmpeg.org/) | `brew install ffmpeg` / `winget install ffmpeg` | Video/audio conversion |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | `brew install yt-dlp` / `winget install yt-dlp` | YouTube downloads |
 
-2. Dev Build:
+```bash
+# macOS
+brew install ffmpeg yt-dlp
 
-    - `npm install` / `yarn install`
-    - `quasar dev -m electron`
+# Windows
+winget install ffmpeg yt-dlp
+```
 
-3. Screen
+On first launch, the app will check for FFmpeg and offer to install it via Homebrew.
 
-![Screen 1](docs/screen-1.jpg)
+## Building
 
-## Previous versions and attempts
+```bash
+# Debug build and run (macOS)
+make run
 
-Looking at https://brainhub.eu/library/electron-alternatives-javascript-frameworks-for-desktop-apps/
+# Release build (macOS)
+make release VERSION=1.0.0
+# → dist/media_converter-1.0.0-macos.zip
+```
 
-1. [x] Electron + Vue.js (FAIL)
+### Windows
 
-    1. Проблема с отображением стандартной системной модалки выбора файла
-    2. Проблема с запуском: после старта иногда отображается белое окно
+```bash
+flutter build windows --release
+# → build\windows\x64\runner\Release\
+```
 
-2. [X] NW.js + Nuxt (FAIL)
+### GitHub Actions
 
-    1. https://github.com/elegantweb/nwjs-vue ошибка npm install: `PostCSS plugin postcss-discard-comments requires PostCSS 8.`
-    2. Nuxt + clean NW.js + https://github.com/zcbenz/nw-sample-apps + https://github.com/nwutils/nw-local-server-example/
-    3. Проблема с остановкой локального сервера
-    4. Не удалось запаковать приложение в exe
+Push a tag to automatically build both platforms:
 
-3. [x] NW.js + Vuetify (FAIL)
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
-    1. проблема с поддержкой fluent-ffmpeg внутри браузера
+On first launch, the app will check for FFmpeg and offer to install it via Homebrew.
 
-4. [X] NW.js + port spinner + Vuetify (FAIL)
-    
-    1. https://www.npmjs.com/package/spawn-for-ip
-    2. child_process not initialized in browser
+## Makefile Commands
 
-5. [x] Electron clean setup + Vuetify + electron-packager
+| Command | Description |
+|---|---|
+| `make setup` | Install dependencies |
+| `make analyze` | Run the Dart analyzer |
+| `make test` | Run all tests |
+| `make run` | Build and launch on macOS |
+| `make release VERSION=x.y.z` | Build release version and create ZIP archive |
+| `make clean` | Clean build artifacts |
+| `make purge` | Clean everything (derived data, caches) |
+| `make format` | Format Dart source code |
+| `make doctor` | Check Flutter installation status |
 
-    1. Almost done, but problems with installer
+## Building
 
-6. [ ] Vue 3 + Pinia + Quasar + Electron
-    1. https://mokkapps.de/blog/building-a-vue-3-desktop-app-with-pinia-electron-and-quasar/
+```bash
+# Debug build and run
+make run
 
+# Release build
+make release VERSION=1.0.0
+# → dist/media_converter-1.0.0-macos.zip
 
+# Windows (from Windows)
+make build platform=windows
+```
 
-## FYI: best way to add FFmpeg to project
+## Download
 
-1. `npm i fluent-ffmpeg` - gives all neccessary methods
-2. `npm i @ffmpeg-installer/ffmpeg` - add binary of ffmpeg to project
-3. `const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;` - get path of binary
-4. `Ffmpeg.setFfmpegPath(ffmpegPath);` - set binary path value for fluent-ffmpeg
-5. `npm i @ffprobe-installer/ffprobe` - add ffprobe binary to project
-6. `npm install nw --nwjs_build_type=sdk` - open console dev tools in app
+Pre-built binaries are available on the [Releases](https://github.com/evgenykon/media-converter/releases) page.
+
+1. Download `media_converter-*-macos.zip`
+2. Extract and move `media_converter.app` to Applications
+3. Run `brew install ffmpeg yt-dlp`
+4. Open the app
+
+## Features
+
+- Video conversion between formats (MP4, WebM, AVI, MOV, GIF, etc.)
+- Audio extraction (MP3, AAC, FLAC, OGG)
+- Hardware acceleration (VideoToolbox on macOS)
+- YouTube video/audio download with format selection
+- Conversion history
+- System notifications
