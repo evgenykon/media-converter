@@ -39,6 +39,7 @@ Freshly scaffolded Flutter project — the default counter demo app. No custom a
 | `make analyze` | Run the Dart analyzer |
 | `make test` | Run all tests |
 | `make clean` | Clean build artifacts and cache |
+| `make purge` | Clean garbage: derived data, .dart_tool, Pods, Xcode caches |
 | `make run` | Run on connected device |
 | `make build platform=<target>` | Build for a specific platform |
 | `make format` | Format Dart source code |

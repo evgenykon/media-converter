@@ -1,4 +1,4 @@
-.PHONY: setup analyze test clean run build format outdated upgrade doctor
+.PHONY: setup analyze test clean purge run build format outdated upgrade doctor
 
 setup: ## Install dependencies and generate code
 	flutter pub get
@@ -11,6 +11,17 @@ test: ## Run all tests
 
 clean: ## Clean build artifacts and dependencies
 	flutter clean
+	flutter pub cache clean
+
+purge: ## Clean garbage: derived data, caches, build artifacts
+	flutter clean
+	rm -rf .dart_tool/
+	rm -rf build/
+	rm -rf macos/Pods/
+	rm -rf windows/runner/cmake-build*/
+	rm -rf macos/Runner.xcworkspace/xcuserdata/
+	rm -rf ~/Library/Caches/com.flutter.*
+	rm -rf ~/Library/Developer/Xcode/DerivedData/Runner-*
 	flutter pub cache clean
 
 run: ## Run on connected device
