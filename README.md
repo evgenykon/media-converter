@@ -4,9 +4,9 @@ Desktop tool for video/audio conversion using FFmpeg, with YouTube download supp
 
 ## Screenshots
 
-![Home screen](screen/home.png)
-![Conversion presets](screen/presets.png)
-![YouTube download](screen/youtube.png)
+![Конвертация](screen/converter.png)
+![Список конвертаций](screen/list.png)
+![YouTube загрузка](screen/youtube.png)
 
 ## Dependencies
 
