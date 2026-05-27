@@ -176,6 +176,58 @@ class ConversionProvider extends Notifier<ConversionState> {
     ref.read(historyServiceProvider).save(jobs);
   }
 
+  Future<void> addYtDownload({
+    required String outputPath,
+    required String outputName,
+    required String url,
+    required String formatArg,
+    bool downloadSubtitles = false,
+    bool embedThumbnail = false,
+  }) async {
+    var file = File(outputPath);
+    if (!await file.exists()) {
+      for (final alt in ['.webm', '.mkv', '.m4a', '.mp3']) {
+        final altFile = File(outputPath + alt);
+        if (await altFile.exists()) {
+          file = altFile;
+          break;
+        }
+      }
+    }
+    final size = await file.length();
+    final now = DateTime.now();
+    final name = file.path.split('/').last;
+    final ext = name.contains('.') ? name.split('.').last : 'mp4';
+    final source = MediaFile(
+      path: outputPath,
+      name: name,
+      sizeBytes: size,
+      format: ext,
+    );
+
+    final preset = Preset(
+      name: 'YouTube: $formatArg',
+      category: PresetCategory.video,
+      container: ext,
+      description: url,
+    );
+
+    final job = ConversionJob(
+      id: _uuid.v4(),
+      source: source,
+      preset: preset,
+      outputPath: outputPath,
+      status: JobStatus.completed,
+      progress: 1.0,
+      createdAt: now,
+      completedAt: now,
+      outputSizeBytes: size,
+    );
+
+    state = state.copyWith(jobs: [job, ...state.jobs]);
+    await ref.read(historyServiceProvider).save(state.jobs);
+  }
+
   void clearHistory() {
     state = state.copyWith(jobs: []);
     ref.read(historyServiceProvider).save([]);

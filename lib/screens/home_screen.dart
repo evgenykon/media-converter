@@ -13,6 +13,8 @@ import '../providers/settings_provider.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/job_tile.dart';
 import '../widgets/preset_modal.dart';
+import '../widgets/yt_download_modal.dart';
+import '../services/ytdlp_service.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -58,10 +60,23 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _pickFile(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('Конвертировать'),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            onPressed: () => _pickFile(context, ref),
+            icon: const Icon(Icons.add),
+            label: const Text('Конвертировать'),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            onPressed: () => _ytDownload(context, ref),
+            icon: const Icon(Icons.download),
+            label: const Text('Скачать с YouTube'),
+            heroTag: 'yt_download',
+          ),
+        ],
       ),
     );
   }
@@ -133,6 +148,44 @@ class HomeScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => _SettingsDialog(settings: settings),
+    );
+  }
+
+  void _ytDownload(BuildContext context, WidgetRef ref) async {
+    final available = await YtDlpService.isAvailable();
+    if (!context.mounted) return;
+    if (!available) {
+      _showYtDlpDialog(context);
+      return;
+    }
+    final result = await showYtDownloadModal(context);
+    if (result != null && context.mounted) {
+      ref.read(conversionProvider.notifier).addYtDownload(
+        outputPath: result.outputPath,
+        outputName: result.outputName,
+        url: result.url,
+        formatArg: result.formatArg,
+        downloadSubtitles: result.downloadSubtitles,
+        embedThumbnail: result.embedThumbnail,
+      );
+    }
+  }
+
+  void _showYtDlpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('yt-dlp не найден'),
+        content: const Text(
+          'Для скачивания с YouTube необходим yt-dlp.\n\n'
+          'Установите через Homebrew:\n'
+          '  brew install yt-dlp\n\n'
+          'Или скачайте с github.com/yt-dlp/yt-dlp',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Закрыть')),
+        ],
+      ),
     );
   }
 
